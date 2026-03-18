@@ -79,8 +79,8 @@ def _ensure_logged_in() -> bool:
 
 def _get_subreddit_posts(subreddit: str) -> List[dict]:
     """
-    Browse /r/subreddit/new/ and return list of post dicts.
-    Each dict: {url, title, snippet}
+    Browse /r/subreddit/new/ and collect (title, comment_count) for each post.
+    Returns list of dicts with {title, comment_count}. No navigation needed.
     """
     B.open_url(f"{BASE_URL}/r/{subreddit}/new/")
     B.wait_seconds(3)
@@ -88,33 +88,58 @@ def _get_subreddit_posts(subreddit: str) -> List[dict]:
     tree = B.snapshot()
     posts = []
 
-    # In old Reddit, post titles are links with sitelink class or plain links
-    # Extract all post title links: pattern is "link: <Title>" followed by submission metadata
-    title_pattern = r'\[(\d+-\d+)\] link: ([A-Z][^\n]{15,150})\n'
-    matches = re.findall(title_pattern, tree)
+    # In old Reddit each post row has: title link followed by "submitted X ago" then "N comments"
+    # Pair title links with comment links by scanning "submitted" anchors
+    submitted_positions = [m.start() for m in re.finditer(r'\bsubmitted\b', tree)]
+    comment_positions = [(m.start(), m.group(1)) for m in
+                         re.finditer(r'\[(\d+-\d+)\] link: (\d+ comments?)', tree)]
 
-    for ref, title in matches[:30]:
-        # Skip sidebar/wiki links
-        skip_words = ["Submit a new", "Welcome to Reddit", "How To Get", "FBA Prep",
-                      "FBA Labeling", "FBA Packing", "Contacting Amazon", "Related Subs",
-                      "About /r/", "wiki", "Discord", "BECOME A"]
+    seen_titles = set()
+    for pos in submitted_positions[:30]:
+        # Title link: last link before 'submitted'
+        chunk_before = tree[max(0, pos - 1500):pos]
+        links_before = re.findall(r'\[(\d+-\d+)\] link: ([^\n]{15,200})', chunk_before)
+        if not links_before:
+            continue
+        _ref, title = links_before[-1]
+        title = title.strip()
+
+        skip_words = ["Submit a new", "Welcome to", "How To Get", "Contacting Amazon",
+                      "About /r/", "wiki", "Discord", "/r/", "http", "View Poll"]
         if any(s.lower() in title.lower() for s in skip_words):
             continue
-        posts.append({"title_ref": ref, "title": title, "url": None})
+        if title in seen_titles:
+            continue
+
+        # Comment count: first comment link after 'submitted'
+        comment_count = 0
+        for cpos, cref in comment_positions:
+            if cpos > pos:
+                m = re.search(r'(\d+)', tree[cpos:cpos+100])
+                comment_count = int(m.group(1)) if m else 0
+                break
+
+        seen_titles.add(title)
+        posts.append({"title": title, "comment_count": comment_count})
 
     return posts[:20]
 
 
-def _get_post_url_and_content(post: dict) -> Tuple[str, str]:
-    """Click on a post title, return (url, selftext_snippet)."""
-    B.click(post["title_ref"])
+def _navigate_and_get_content(post_index: int, subreddit: str) -> Tuple[str, str]:
+    """
+    From the subreddit listing, click the Nth comment link to open post.
+    Returns (url, snippet).
+    """
+    tree = B.snapshot()
+    comment_links = re.findall(r'\[(\d+-\d+)\] link: \d+ comments?', tree)
+    if post_index >= len(comment_links):
+        return "", ""
+    B.click(comment_links[post_index])
     B.wait_seconds(3)
     url = B.get_url()
-    tree = B.snapshot()
-
-    # Grab text content of the post body
-    text_blocks = re.findall(r'StaticText: ([^\n]{20,})', tree)
-    snippet = " ".join(text_blocks[:8])[:600]
+    tree2 = B.snapshot()
+    text_blocks = re.findall(r'StaticText: ([^\n]{20,})', tree2)
+    snippet = " ".join(text_blocks[:10])[:700]
     return url, snippet
 
 
@@ -204,41 +229,64 @@ def run(config: dict) -> dict:
 
         logger.info(f"Reddit: scanning r/{subreddit}")
         posts = _get_subreddit_posts(subreddit)
+        # We're now on the subreddit listing page
 
+        visited = 0
         for post in posts:
             if get_today_count("reddit") >= target:
                 break
 
-            # Open post and get URL + content
+            # From listing, click Nth comment link (fresh snapshot each time)
             try:
-                post_url, snippet = _get_post_url_and_content(post)
+                tree = B.snapshot()
+                comment_links = re.findall(r'\[(\d+-\d+)\] link: \d+ comments?', tree)
+                if visited >= len(comment_links):
+                    break
+                B.click(comment_links[visited])
+                B.wait_seconds(3)
+                post_url = B.get_url()
             except Exception as e:
-                logger.warning(f"Reddit: failed to open post — {e}")
-                B.press("Alt+Left")
+                logger.warning(f"Reddit: nav failed — {e}")
+                B.open_url(f"{BASE_URL}/r/{subreddit}/new/")
+                B.wait_seconds(3)
+                visited += 1
+                summary["skipped"] += 1
+                continue
+
+            visited += 1
+
+            if already_replied(post_url):
+                B.open_url(f"{BASE_URL}/r/{subreddit}/new/")
                 B.wait_seconds(2)
                 summary["skipped"] += 1
                 continue
 
-            if already_replied(post_url):
-                B.press("Alt+Left")
-                B.wait_seconds(1)
-                summary["skipped"] += 1
-                continue
+            # Get post content — skip sidebar, anchor on post title
+            tree = B.snapshot()
+            title_idx = tree.find(post["title"][:40])
+            if title_idx > 0:
+                # Extract StaticText after the title (post body + comments)
+                chunk = tree[title_idx:title_idx + 3000]
+            else:
+                chunk = tree[len(tree) // 2:]  # fallback: second half of tree
+            text_blocks = re.findall(r'StaticText: ([^\n]{15,})', chunk)
+            # Skip meta lines (submitted, by, share, save, etc.)
+            meta = {"submitted", "by", "share", "save", "hide", "report",
+                    "crosspost", "sorted by:", "best", "formatting help"}
+            clean = [t for t in text_blocks if t.strip().lower() not in meta]
+            snippet = " ".join(clean[:12])[:700]
 
-            # Generate reply
             reply_text, product = generate_reply(
                 post_title=post["title"],
                 post_content=snippet,
                 platform="reddit"
             )
-
             if not reply_text:
-                B.press("Alt+Left")
-                B.wait_seconds(1)
+                B.open_url(f"{BASE_URL}/r/{subreddit}/new/")
+                B.wait_seconds(2)
                 summary["skipped"] += 1
                 continue
 
-            # Post comment
             success = _post_comment(reply_text)
 
             if success:
@@ -246,15 +294,14 @@ def run(config: dict) -> dict:
                           snippet[:200], reply_text, product, "posted")
                 summary["posted"] += 1
                 logger.info(f"Reddit: posted #{summary['posted']} — {post['title'][:60]}")
-                B.press("Alt+Left")
-                B.wait_seconds(delay)
             else:
                 log_reply("reddit", post_url, post["title"],
                           snippet[:200], reply_text, product, "failed",
                           "comment not confirmed")
                 summary["failed"] += 1
                 logger.warning(f"Reddit: comment failed — {post['title'][:60]}")
-                B.press("Alt+Left")
-                B.wait_seconds(15)
+
+            B.open_url(f"{BASE_URL}/r/{subreddit}/new/")
+            B.wait_seconds(delay if success else 10)
 
     return summary
