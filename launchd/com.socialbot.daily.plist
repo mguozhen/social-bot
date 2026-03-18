@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.socialbot.daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/guozhen/social-bot/run_daily.py</string>
+    </array>
+
+    <!-- Run at 10:05 AM every day -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>10</integer>
+        <key>Minute</key>
+        <integer>5</integer>
+    </dict>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>ANTHROPIC_API_KEY</key>
+        <string>FILL_IN</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/guozhen/social-bot/logs/launchd_stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/guozhen/social-bot/logs/launchd_stderr.log</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

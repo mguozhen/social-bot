@@ -1,0 +1,62 @@
+{
+  "x": {
+    "username": "@VocAiSage",
+    "daily_target": 20,
+    "min_delay_seconds": 300,
+    "search_queries": [
+      "customer service AI agent ecommerce",
+      "AI support agent Amazon seller",
+      "ecommerce customer support automation",
+      "Amazon FBA AI tools",
+      "AI ecommerce chatbot",
+      "Amazon seller review analysis",
+      "product review AI analysis",
+      "Amazon review management tools",
+      "customer service agent AI startup",
+      "ecommerce AI automation"
+    ]
+  },
+  "reddit": {
+    "username": "mguozhen",
+    "daily_target": 10,
+    "min_delay_seconds": 600,
+    "subreddits": [
+      "FulfillmentByAmazon",
+      "AmazonSeller",
+      "ecommerce",
+      "Entrepreneur",
+      "AmazonFBA"
+    ]
+  },
+  "products": {
+    "Solvea": {
+      "description": "AI customer service agent for Amazon/Shopify sellers — handles buyer queries autonomously using product and order data",
+      "trigger_keywords": [
+        "customer service", "support agent", "ai agent", "chatbot",
+        "customer support", "buyer queries", "customer queries",
+        "support automation", "helpdesk", "ticket", "response time"
+      ]
+    },
+    "VOC.ai": {
+      "description": "Amazon review intelligence tool — clusters review pain points by product attribute, maps to BSR impact, surfaces optimization suggestions",
+      "trigger_keywords": [
+        "amazon review", "review analysis", "product review", "customer feedback",
+        "review management", "1-star", "negative review", "vine review",
+        "review sentiment", "listing optimization", "bsr", "browse node",
+        "review response", "review insight"
+      ]
+    }
+  },
+  "reply_style": {
+    "tone": "knowledgeable seller/builder sharing experience",
+    "max_length_x": 260,
+    "max_length_reddit": 400,
+    "rules": [
+      "Lead with a genuine insight or question about the post",
+      "Mention product naturally as 'what we use/built' — not as an ad",
+      "Never start with 'Great post!' or 'I agree!'",
+      "Sound like a real seller who has faced this problem",
+      "If post is not directly relevant, skip — do not force a mention"
+    ]
+  }
+}
