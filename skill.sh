@@ -29,7 +29,34 @@ fi
 cd "$BOT_DIR"
 
 # Route by prompt keywords
-if echo "$PROMPT" | grep -qE "stat|count|how many|report"; then
+if echo "$PROMPT" | grep -qE "warmup|warm up|karma|养号"; then
+    COUNT=8
+    if echo "$PROMPT" | grep -qE "[0-9]+"; then
+        COUNT=$(echo "$PROMPT" | grep -oE "[0-9]+" | head -1)
+    fi
+    echo "Running Reddit warmup — target ${COUNT} comments..."
+    python3 "$BOT_DIR/warmup_reddit.py" "$COUNT"
+elif echo "$PROMPT" | grep -qE "leads|客户|potential customer"; then
+    echo "=== Solvea Leads ==="
+    python3 -c "
+import sys, json; sys.path.insert(0, '.')
+from bot.db import get_leads
+leads = get_leads(7)
+if not leads:
+    print('No leads found in last 7 days.')
+else:
+    print(f'Found {len(leads)} leads in last 7 days:\n')
+    for l in leads:
+        pain = json.loads(l.get('pain_points','[]'))
+        print(f\"[{l['lead_score']}/10] [{l['urgency'].upper()}] {l['platform'].upper()}\")
+        print(f\"  Title: {l['post_title']}\")
+        print(f\"  Type:  {l['business_type']}\")
+        print(f\"  Pain:  {', '.join(pain[:2])}\")
+        print(f\"  Why:   {l['reason']}\")
+        print(f\"  URL:   {l['post_url']}\")
+        print()
+"
+elif echo "$PROMPT" | grep -qE "stat|count|how many|report"; then
     echo "=== Social Bot Stats ==="
     python3 -c "
 import sys; sys.path.insert(0, '.')

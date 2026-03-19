@@ -45,6 +45,20 @@ def init_db():
                 ON replies(platform, created_at);
             CREATE INDEX IF NOT EXISTS idx_replies_post_url
                 ON replies(post_url);
+
+            CREATE TABLE IF NOT EXISTS leads (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                platform     TEXT NOT NULL,
+                post_url     TEXT NOT NULL UNIQUE,
+                post_title   TEXT,
+                business_type TEXT,
+                pain_points  TEXT,   -- JSON array
+                lead_score   INTEGER,
+                urgency      TEXT,
+                reason       TEXT,
+                replied      INTEGER DEFAULT 0,
+                created_at   TEXT DEFAULT (datetime('now'))
+            );
         """)
 
 
@@ -93,6 +107,36 @@ def get_stats(days=30):
             WHERE date(created_at) >= date('now', ? || ' days')
             GROUP BY day, platform
             ORDER BY day DESC
+        """, (f"-{days}",)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def save_lead(lead: dict):
+    import json as _json
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT OR IGNORE INTO leads
+              (platform, post_url, post_title, business_type, pain_points, lead_score, urgency, reason, replied)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            lead.get("platform"),
+            lead.get("post_url"),
+            lead.get("post_title"),
+            lead.get("business_type"),
+            _json.dumps(lead.get("pain_points", [])),
+            lead.get("lead_score"),
+            lead.get("urgency"),
+            lead.get("reason"),
+            1,  # we replied
+        ))
+
+
+def get_leads(days=7):
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT * FROM leads
+            WHERE date(created_at) >= date('now', ? || ' days')
+            ORDER BY lead_score DESC, created_at DESC
         """, (f"-{days}",)).fetchall()
         return [dict(r) for r in rows]
 

@@ -68,3 +68,57 @@ Output only the reply text, nothing else."""
         reply = reply[:max_len].rsplit(" ", 1)[0] + "..."
 
     return reply, product
+
+
+def analyze_lead(post_title: str, post_content: str, post_url: str, platform: str) -> Optional[dict]:
+    """
+    判断发帖人是否是 Solvea 的潜在客户，并提取关键信息。
+    返回 dict 或 None（不是潜在客户）。
+    """
+    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+
+    user_prompt = f"""Analyze this social media post and determine if the author is a potential customer for Solvea.
+
+Solvea is an AI customer support agent for Shopify/ecommerce stores that:
+- Autonomously handles support tickets (tracking, returns, product questions)
+- Integrates directly with Shopify to take actions (process returns, update shipping)
+- Provides a unified inbox for human handoff
+
+Post URL: {post_url}
+Platform: {platform}
+Title: {post_title}
+Content: {post_content[:600]}
+
+Respond in JSON only:
+{{
+  "is_lead": true/false,
+  "lead_score": 1-10,
+  "pain_points": ["list of pain points mentioned"],
+  "business_type": "shopify store / amazon seller / saas / other / unknown",
+  "urgency": "high / medium / low",
+  "reason": "one sentence why they are or aren't a lead"
+}}
+
+Only return JSON, nothing else."""
+
+    try:
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+        text = msg.content[0].text.strip()
+        # Extract JSON
+        import re
+        json_match = re.search(r'\{.*\}', text, re.DOTALL)
+        if not json_match:
+            return None
+        data = json.loads(json_match.group())
+        if not data.get("is_lead"):
+            return None
+        data["post_url"] = post_url
+        data["platform"] = platform
+        data["post_title"] = post_title
+        return data
+    except Exception:
+        return None

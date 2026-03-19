@@ -7,8 +7,8 @@ import time
 import logging
 from typing import List, Tuple
 from . import browser as B
-from .ai_engine import generate_reply
-from .db import log_reply, already_replied, get_today_count
+from .ai_engine import generate_reply, analyze_lead
+from .db import log_reply, already_replied, get_today_count, save_lead
 
 logger = logging.getLogger(__name__)
 
@@ -294,6 +294,11 @@ def run(config: dict) -> dict:
                           snippet[:200], reply_text, product, "posted")
                 summary["posted"] += 1
                 logger.info(f"Reddit: posted #{summary['posted']} — {post['title'][:60]}")
+                # Lead analysis
+                lead = analyze_lead(post["title"], snippet, post_url, "reddit")
+                if lead:
+                    save_lead(lead)
+                    logger.info(f"Reddit: 🎯 lead saved score={lead.get('lead_score')} urgency={lead.get('urgency')}")
             else:
                 log_reply("reddit", post_url, post["title"],
                           snippet[:200], reply_text, product, "failed",

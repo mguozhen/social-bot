@@ -7,8 +7,8 @@ import time
 import logging
 from typing import List
 from . import browser as B
-from .ai_engine import generate_reply
-from .db import log_reply, already_replied, get_today_count
+from .ai_engine import generate_reply, analyze_lead
+from .db import log_reply, already_replied, get_today_count, save_lead
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +186,11 @@ def run(config: dict) -> dict:
                 log_reply("x", real_url, query, snippet, reply_text, product, "posted")
                 summary["posted"] += 1
                 logger.info(f"X: posted reply #{summary['posted']} — {real_url}")
+                # Lead analysis
+                lead = analyze_lead(query, snippet, real_url, "x")
+                if lead:
+                    save_lead(lead)
+                    logger.info(f"X: 🎯 lead saved score={lead.get('lead_score')} urgency={lead.get('urgency')}")
                 time.sleep(delay)
             else:
                 log_reply("x", real_url, query, snippet, reply_text, product, "failed")
