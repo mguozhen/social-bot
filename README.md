@@ -1,236 +1,334 @@
-# 我用 AI 让账号每天自动在 Reddit 和 X 上发 30 条高质量回复，完全不用人工干预
+<p align="center">
+  <img src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" width="80" alt="Social Bot">
+</p>
 
-> 作为跨境电商卖家/工具创业者，我们都知道社媒曝光有多重要——但每天手动刷帖子回复，成本太高。这篇文章讲我怎么用 Claude + 浏览器自动化，搭了一套 Social Reply Bot，现在每天自动在 X 和 Reddit 帮 Solvea 和 VOC.ai 做精准曝光。
+<h1 align="center">Social Reply Bot</h1>
+
+<p align="center">
+  <strong>AI-powered Reddit & X auto-reply bot that finds your customers and joins the conversation.</strong>
+</p>
+
+<p align="center">
+  <a href="#quick-start"><img src="https://img.shields.io/badge/setup-5min-brightgreen?style=flat-square" alt="5min Setup"></a>
+  <a href="https://agentskills.io"><img src="https://img.shields.io/badge/Agent%20Skills-compatible-blue?style=flat-square" alt="Agent Skills"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/python-3.9+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.9+">
+  <img src="https://img.shields.io/badge/platforms-Reddit%20%2B%20X-FF4500?style=flat-square" alt="Reddit + X">
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick Start</a> &bull;
+  <a href="#how-it-works">How It Works</a> &bull;
+  <a href="#features">Features</a> &bull;
+  <a href="#screenshots">Screenshots</a> &bull;
+  <a href="#configuration">Configuration</a> &bull;
+  <a href="#architecture">Architecture</a>
+</p>
 
 ---
 
-## 🤔 我在解决什么问题
+## What is this?
 
-做 AI 工具的，最难的不是产品，是**让目标用户知道你存在**。
+**Social Reply Bot** searches Reddit and X/Twitter for posts relevant to your product, then uses Claude AI to generate genuine, helpful replies that naturally mention your brand. No API keys for Reddit or X required — it uses browser automation to act like a real user.
 
-我们的两个产品：
-- **Solvea** — Amazon/Shopify 卖家的 AI 客服 Agent，自动回答买家问题
-- **VOC.ai** — Amazon 差评分析工具，把 1-star 变成优化 listing 的情报
+**Not spam.** The AI evaluates every post for relevance first. If a post isn't a good fit, it skips it. When it does reply, it sounds like an experienced practitioner sharing real insight — because that's what the prompt engineers it to be.
 
-用户在哪？就在 Reddit 的 r/FulfillmentByAmazon、r/ecommerce，在 X 上搜 "AI customer service ecommerce"。
+Currently configured for two products:
+- **[Solvea](https://solvea.cx)** — AI customer service agent for Amazon/Shopify sellers
+- **[VOC.ai](https://voc.ai)** — Amazon review intelligence and sentiment analysis
 
-他们每天都在发帖问问题：
-- "我的客服自动化怎么配置？"
-- "怎么分析哪些差评影响 BSR 最大？"
-- "有没有 AI 工具能处理买家消息？"
+But it's fully configurable for any product/niche via `config.json`.
 
-**这些帖子，每一条都是精准获客机会。** 但手动回复太累，外包给人又很难保证质量。
+## Features
 
----
+| Feature | Description |
+|---------|-------------|
+| **Dual Platform** | Reddit (subreddit search) + X/Twitter (keyword search) |
+| **AI-Generated Replies** | Claude crafts genuine, on-topic responses — not templates |
+| **Smart Filtering** | Two-layer filter: keyword match first, then AI relevance check |
+| **Browser Automation** | No platform API keys needed — uses real browser sessions |
+| **Reddit Warmup** | Karma-building mode for new accounts (safe subreddits, no product mentions) |
+| **Lead Tracking** | Every replied post scored 1-10 for customer potential |
+| **Web Dashboard** | Real-time Flask dashboard showing daily progress |
+| **Deduplication** | SQLite-backed — never replies to the same post twice |
+| **Rate Limiting** | Configurable delays (Reddit: 10min, X: 5min between replies) |
+| **Daily Scheduling** | macOS LaunchAgent runs at 10:05 AM automatically |
 
-## ⚙️ 系统架构：三层设计
+## How It Works
 
 ```
-搜索引擎（关键词匹配）
+Keyword Search (Reddit subreddits + X queries)
        ↓
-浏览器自动化（browse CLI）
+Two-Layer Relevance Filter
+  ├─ Layer 1: Keyword match (zero API cost)
+  └─ Layer 2: Claude AI judges if post is worth replying to
        ↓
-Claude AI（生成真实、有价值的回复）
+Claude generates reply as "experienced seller sharing real insight"
        ↓
-发帖 → 记录 → Dashboard 监控
+Browser automation posts the reply
+       ↓
+SQLite logs it → Dashboard displays it → Lead scored
 ```
 
-**核心理念：不是垃圾广告，而是真实的行业洞见**
+**The core principle:** Every reply must provide genuine value. The AI is prompted as a "seller with 5 years of experience" who naturally mentions tools they use — not as a marketer pushing a product. Posts that don't fit get skipped, not force-fitted.
 
-AI 会先判断这个帖子是否和我们的产品相关。如果相关，它会以"有 5 年经验的亚马逊卖家"身份，分享真实经验，自然带出产品。如果不相关，直接 skip，绝不强行植入。
+## Screenshots
 
----
+### Dashboard — Real-time Daily Progress
 
-## 📸 实际运行效果
+<p align="center">
+  <img src="docs/screenshot_dashboard.png" width="700" alt="Dashboard showing daily reply targets and progress">
+</p>
 
-### 1. Dashboard — 实时监控每日进度
+The web dashboard tracks daily X posts, Reddit comments, product mentions, and historical totals.
 
-![Dashboard截图](docs/screenshot_dashboard.png)
+### X/Twitter — Targeted Competitive Replies
 
-系统全自动运行，Dashboard 显示：
-- 今日 X 发帖：1条（目标 20条）
-- 今日 Reddit 评论：1条（目标 10条）
-- Solvea 被提及：2次
-- 历史总回复：2条（刚启动第一天）
+<p align="center">
+  <img src="docs/screenshot_x_reply.png" width="700" alt="AI-generated reply on X to a competitor's post">
+</p>
 
----
+The bot found a competitor's tweet about customer support automation and replied with a genuine insight that naturally positioned Solvea as an alternative. No "Great product!" fluff — real technical substance.
 
-### 2. X (Twitter) — 精准找到目标帖子，秒速回复
+### Reddit — High-Quality Community Comments
 
-系统搜索关键词 `"ecommerce customer support automation"`，找到竞品 WukongChat 的推文：
+<p align="center">
+  <img src="docs/screenshot_reddit_reply.png" width="700" alt="AI-generated Reddit comment about WooCommerce chatbot issues">
+</p>
 
-> **@wukongchat** 发帖：Customer support made simple. WukongChat AI automates replies, categorizes inquiries...
+On r/ecommerce, a user discussed WooCommerce chatbot inventory sync issues. The bot shared specific technical experience (event-triggered vs. scheduled sync), earning genuine upvotes and discussion.
 
-**AI 生成的回复（以 @VocAiSage 身份发出）：**
+## Quick Start
 
-![X回复截图](docs/screenshot_x_reply.png)
-
-> "Centralizing convos is step 1 — but the real win is automating *resolution*, not just visibility. We use Solvea to actually *answer* buyers using order data, not just route tickets. Dashboard unification means nothing if agents still do manual lookups."
-
-**分析这条回复为什么有效：**
-- ✅ 不是广告语气，是行业从业者的真实观点
-- ✅ 指出了对方产品的局限（路由 ≠ 解决）
-- ✅ 自然带出 Solvea，以"我们用的工具"的方式
-- ✅ 260 字以内，符合 X 的最佳互动长度
-
----
-
-### 3. Reddit — 深度评论，带来真实讨论
-
-r/ecommerce 上有人发帖讨论 WooCommerce chatbot 的库存同步坑：
-
-**AI 生成并自动发出的评论（账号：mguozhen）：**
-
-![Reddit评论截图](docs/screenshot_reddit_reply.png)
-
-> "That last point hits hard — customers absolutely hold the *store* accountable for what the bot says. No separation in their mind.
->
-> We burned inventory sync trust early on too. Daily sync sounds safe until you're running flash sales or dealing with supplier delays. The only real fix was event-triggered sync, not scheduled. Bad review from a bot mistake is genuinely worse than a human CS mistake because it feels systemic to the customer."
-
-**为什么这条评论质量高：**
-- ✅ 先共鸣，再输出洞见（"That last point hits hard"）
-- ✅ 分享了具体的技术方案（event-triggered vs. scheduled sync）
-- ✅ 提供了额外价值（bot 失误比人工失误评论影响更大）
-- ✅ 获得了其他用户的正向互动
-
----
-
-## 🔧 技术实现细节
-
-### 关键词匹配 → AI 过滤的双重机制
-
-```python
-# 第一层：关键词快速过滤（不消耗 API）
-def detect_product(text: str) -> Optional[str]:
-    keywords = {
-        "Solvea": ["customer service", "ai agent", "chatbot", "support automation"],
-        "VOC.ai": ["amazon review", "vine review", "review analysis", "1-star"]
-    }
-    # 匹配得分最高的产品，无匹配返回 None
-
-# 第二层：Claude 判断是否值得回复
-# 提示词让 Claude 以"有 5 年经验的 Amazon 卖家"身份
-# 不相关时返回 SKIP，不强行植入
-```
-
-### 浏览器自动化：不需要任何平台 API
-
-用 `browse` CLI 控制本地 Chrome：
-- Reddit：账号用 Google OAuth 登录，直接操作 old.reddit.com
-- X：账号 @VocAiSage 已登录，search → 找相关推文 → 发回复
-
-**完全不需要 Reddit API Key 或 Twitter API Key**，用的是浏览器会话，成本为零。
-
-### 防重复 + 速率控制
-
-```python
-# 每条帖子只回复一次（无论成功失败）
-def already_replied(post_url: str) -> bool:
-    # 查 SQLite，posted 和 failed 都不重试
-
-# Reddit 每条间隔 10 分钟
-# X 每条间隔 5 分钟
-# 每天 X 最多 20 条，Reddit 最多 10 条
-```
-
----
-
-## 📊 已知局限和解决方案
-
-| 问题 | 原因 | 解决方案 |
-|------|------|----------|
-| Reddit 新账号评论被自动删除 | 账号 karma < 10 或注册 < 10 天 | 先手动养号 2 周，刷满基础 karma |
-| X 某些帖子回复失败 | 页面结构变化/rate limit | 已加重试逻辑，失败后跳过不死循环 |
-| FBA 子版块匹配率低 | 今天的帖子话题不对口 | 多配几个 subreddit，r/ecommerce 效果更好 |
-
----
-
-## 🚀 如何自己搭一套
-
-### 方案一：一键安装到新 Mac
+### Option 1: One-Line Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mguozhen/social-bot/main/install.sh | bash
 ```
 
-安装脚本会自动完成：
-1. Clone 代码
-2. 安装 Python 依赖（anthropic, flask）
-3. 检查 browse CLI
-4. 引导填写 `.env`（只需要 ANTHROPIC_API_KEY）
-5. 初始化 SQLite 数据库
-6. 注册 macOS LaunchAgent（每天 10:05 自动运行）
+This will:
+1. Clone the repo to `~/social-bot`
+2. Install Python dependencies (`anthropic`, `flask`)
+3. Check for `browse` CLI
+4. Guide you through `.env` setup
+5. Initialize SQLite database
+6. Register macOS LaunchAgent (daily 10:05 AM)
 
-### 方案二：通过 openclaw 一行调用
-
-如果你已经安装了 openclaw：
+### Option 2: Manual Setup
 
 ```bash
-clawhub install social-reply-bot
+git clone https://github.com/mguozhen/social-bot.git ~/social-bot
+cd ~/social-bot
+pip3 install -r requirements.txt
+cp .env.template .env
+# Edit .env with your ANTHROPIC_API_KEY
 ```
 
-然后直接说：
-- `"social reply bot"` — 运行两个平台
-- `"social reply bot x only"` — 只跑 X
-- `"social reply bot stats"` — 查看今日数据
-- `"social reply bot dashboard"` — 打开可视化面板
+### Prerequisites
 
-### 配置文件说明
+| Requirement | How to Get It |
+|------------|---------------|
+| Python 3.9+ | Pre-installed on macOS |
+| `browse` CLI | `npm install -g @anthropic-ai/browse-cli` |
+| Anthropic API Key | [console.anthropic.com](https://console.anthropic.com) |
+| Reddit account | Log in once in the browse-controlled Chrome |
+| X/Twitter account | Log in once in the browse-controlled Chrome |
 
-编辑 `~/social-bot/config.json`，自定义你的场景：
+> **No Reddit API key or Twitter API key required.** The bot uses browser sessions, not platform APIs.
+
+## Commands
+
+### As Claude Code Skill
+
+Once installed as a skill, just tell Claude:
+
+```
+social reply bot                  # run both platforms
+social reply bot x only           # X/Twitter only
+social reply bot reddit only      # Reddit only
+social reply bot warmup           # build Reddit karma (8 comments)
+social reply bot warmup 15        # warmup with custom target
+social reply bot leads            # show potential customers found
+social reply bot stats            # today's stats
+social reply bot dashboard        # open web dashboard
+```
+
+### As Standalone Script
+
+```bash
+python3 run_daily.py              # run both platforms
+python3 run_daily.py --x-only     # X only
+python3 run_daily.py --reddit-only # Reddit only
+python3 warmup_reddit.py          # karma building mode
+```
+
+## Configuration
+
+Edit `config.json` to customize for your product:
 
 ```json
 {
   "x": {
+    "username": "@YourAccount",
     "daily_target": 20,
+    "min_delay_seconds": 300,
     "search_queries": [
-      "你的关键词1",
-      "你的关键词2"
+      "your product keyword 1",
+      "your product keyword 2"
     ]
   },
   "reddit": {
+    "username": "your_reddit_user",
     "daily_target": 10,
-    "subreddits": ["你的目标社区"]
+    "min_delay_seconds": 600,
+    "subreddits": ["YourTargetSubreddit", "AnotherOne"]
   },
   "products": {
-    "你的产品名": {
-      "description": "产品描述，AI 会用这个决定怎么提及",
-      "trigger_keywords": ["相关关键词"]
+    "YourProduct": {
+      "description": "What your product does (AI uses this to craft mentions)",
+      "trigger_keywords": ["keyword1", "keyword2"]
     }
+  },
+  "reply_style": {
+    "tone": "knowledgeable practitioner sharing experience",
+    "max_length_x": 260,
+    "max_length_reddit": 400,
+    "rules": [
+      "Lead with genuine insight about the post",
+      "Mention product as 'what we use/built' — not as an ad",
+      "Skip if not relevant — never force a mention"
+    ]
   }
 }
 ```
 
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ANTHROPIC_API_KEY` | Yes | Claude API key for reply generation |
+| `BROWSERBASE_API_KEY` | No | Optional: persistent browser sessions across reboots |
+| `BROWSERBASE_PROJECT_ID` | No | Optional: pairs with Browserbase key |
+
+## Architecture
+
+```
+social-bot/
+├── bot/
+│   ├── ai_engine.py        # Claude AI: relevance filter + reply generation
+│   ├── browser.py           # Browser automation via browse CLI
+│   ├── db.py                # SQLite: dedup, history, lead scoring
+│   ├── reddit_bot.py        # Reddit: search subreddits, post comments
+│   └── x_bot.py             # X/Twitter: search queries, post replies
+├── dashboard/
+│   ├── app.py               # Flask web dashboard
+│   └── templates/           # Dashboard HTML
+├── docs/
+│   ├── screenshot_dashboard.png
+│   ├── screenshot_reddit_reply.png
+│   └── screenshot_x_reply.png
+├── launchd/                 # macOS LaunchAgent plist
+├── config.json              # Platform targets, keywords, products
+├── run_daily.py             # Main entry point (scheduled daily)
+├── warmup_reddit.py         # Reddit karma builder
+├── install.sh               # One-line installer
+├── setup.sh                 # Manual setup helper
+├── SKILL.md                 # Claude Code / Agent Skills definition
+└── .env.template            # Credential template
+```
+
+### Two-Layer Filtering
+
+```python
+# Layer 1: Fast keyword match (zero API cost)
+def detect_product(text: str) -> Optional[str]:
+    # Returns matching product name or None
+
+# Layer 2: Claude AI relevance check
+# If Layer 1 matches, Claude decides:
+#   - Is this post genuinely relevant?
+#   - Can we add real value with a reply?
+#   - SKIP if forcing a mention would feel unnatural
+```
+
+### Rate Limiting & Safety
+
+| Platform | Delay Between Replies | Daily Cap | Deduplication |
+|----------|----------------------|-----------|---------------|
+| Reddit | 10 minutes | 10 posts | SQLite (URL-based) |
+| X/Twitter | 5 minutes | 20 posts | SQLite (URL-based) |
+
+## Reddit Warmup
+
+New Reddit accounts need karma before posting in restricted subreddits. The warmup mode:
+
+- Visits safe, low-moderation subreddits (r/karma, r/CasualConversation, r/self)
+- Claude Haiku generates authentic short comments (no product mentions)
+- 90-180 second natural delays between posts
+- Default: 8 comments per session, configurable
+
+```bash
+python3 warmup_reddit.py          # default 8 comments
+python3 warmup_reddit.py --target 15  # custom target
+```
+
+## Expected Results
+
+With default settings (X: 20/day, Reddit: 10/day):
+
+| Metric | Monthly |
+|--------|---------|
+| Posts covered | 600+ targeted posts |
+| Users reached | 600+ people actively discussing your niche |
+| Click-through | ~10-15% visit your profile/link |
+| Cost | ~$0.30/day (Claude API at ~$0.01/reply) |
+
+This isn't viral growth — it's **consistent, targeted brand presence** in conversations where your product is genuinely relevant.
+
+## Known Limitations
+
+| Issue | Cause | Workaround |
+|-------|-------|------------|
+| Reddit comments auto-removed | Account karma < 10 or age < 10 days | Run `warmup` mode for 1-2 weeks first |
+| Some X replies fail | Page structure changes or rate limits | Auto-retry with backoff, skips on persistent failure |
+| Low match rate on some days | Today's posts don't match your keywords | Add more subreddits and search queries |
+
+## FAQ
+
+<details>
+<summary><strong>Is this against Reddit/X terms of service?</strong></summary>
+
+This tool uses browser automation (not API abuse) and generates unique, contextually relevant responses (not spam). However, automated posting always carries platform risk. Use responsibly, keep daily volumes reasonable, and ensure your replies genuinely add value to conversations.
+</details>
+
+<details>
+<summary><strong>How do I add my own product?</strong></summary>
+
+Edit the `products` section in `config.json`. Add your product name, description (used by Claude to craft natural mentions), and trigger keywords. Then update `search_queries` and `subreddits` to target where your audience hangs out.
+</details>
+
+<details>
+<summary><strong>Can I use this without Claude Code?</strong></summary>
+
+Yes. `run_daily.py` is a standalone script. You just need Python 3.9+, the `browse` CLI, and an Anthropic API key. The Claude Code skill integration is optional.
+</details>
+
+<details>
+<summary><strong>How much does it cost to run?</strong></summary>
+
+About $0.01 per reply (Claude API). At 30 replies/day, that's roughly $9/month. Browser automation is free — no Reddit or X API fees.
+</details>
+
+## Contributing
+
+PRs welcome. Please test your changes with both platforms before submitting.
+
+## License
+
+[MIT](LICENSE)
+
 ---
 
-## 💡 适合哪些场景
-
-✅ **跨境电商工具/SaaS** — 目标用户在 Reddit/X 上非常活跃，且乐于分享经验
-✅ **B2B 产品冷启动** — 社区回复是最自然的 PLG 方式，比广告信任度高 10 倍
-✅ **个人品牌建设** — 以专家身份持续输出，积累行业影响力
-✅ **竞品监控+截流** — 搜竞品关键词，在竞品帖子下自然推荐自己
-
-❌ **不适合**：纯 C 端消费品（用户不在专业论坛）、需要图片/视频的场景
-
----
-
-## 📈 预期效果
-
-按目前配置（X 20条/天，Reddit 10条/天）：
-- 每月覆盖 **600+ 条精准帖子**
-- 触达 **600+ 位正在讨论相关问题的用户**
-- 其中约 10-15% 会点击主页/链接了解更多
-
-这不是一夜暴富的流量，而是**持续的、精准的品牌曝光**，在目标用户最需要你的时刻出现。
-
----
-
-## 🔗 资源链接
-
-- GitHub 仓库：https://github.com/mguozhen/social-bot
-- clawhub skill：`clawhub install social-reply-bot`
-- 所需费用：约 $0.01/条回复（Claude API），其余零成本
-
----
-
-*用 Claude Code + browse CLI 构建，完整代码开源。有问题欢迎在评论区讨论。*
+<p align="center">
+  Built with <a href="https://claude.ai">Claude AI</a> &bull; Browser automation via <a href="https://www.npmjs.com/package/@anthropic-ai/browse-cli">browse CLI</a>
+</p>
